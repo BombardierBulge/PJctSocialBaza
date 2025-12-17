@@ -1,31 +1,35 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
 import { User } from './User';
 import { Comment } from './Comment';
 import { Like } from './Like';
 
-@Entity()
+@Entity('posts')
 export class Post {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryColumn()
+  post_id!: number;
 
   @Column()
-  title!: string;
+  user_id!: number;
 
   @Column('text')
   content!: string;
 
+  @Column({ nullable: true })
+  image_url?: string;
+
+  @CreateDateColumn()
+  created_at!: Date;
+
+  @UpdateDateColumn()
+  updated_at!: Date;
+
   @ManyToOne(() => User, user => user.posts)
-  author!: User;
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
 
   @OneToMany(() => Comment, comment => comment.post)
   comments!: Comment[];
 
   @OneToMany(() => Like, like => like.post)
   likes!: Like[];
-
-  @CreateDateColumn()
-  createdAt!: Date;
-
-  @UpdateDateColumn()
-  updatedAt!: Date;
 }

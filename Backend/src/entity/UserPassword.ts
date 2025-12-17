@@ -1,16 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column } from 'typeorm';
 
-@Entity()
+@Entity('user_passwords')
 export class UserPassword {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryColumn()
+  user_id!: number;
 
   @Column()
-  userId!: number;
-
-  @Column()
-  passwordHash!: string;
-
-  @Column({ nullable: true })
-  salt?: string;
+  password_hash!: string;
 }

@@ -1,24 +1,23 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
-import { User } from './User';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-@Entity()
+@Entity('user_profile')
 export class UserProfile {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ name: 'id' })
   id!: number;
 
-  @OneToOne(() => User)
-  @JoinColumn()
-  user!: User;
+  @Column({ name: 'userId' })
+  userId!: number;
 
-  @Column({ nullable: true })
-  bio?: string;
-
-  @Column({ nullable: true })
+  @Column({ name: 'avatarUrl', nullable: true })
   avatarUrl?: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'website', nullable: true })
+  website?: string;
+
+  @Column({ name: 'bio', nullable: true })
+  bio?: string;
+
+  @Column({ name: 'location', nullable: true })
   location?: string;
 
-  @Column({ nullable: true })
-  website?: string;
 }

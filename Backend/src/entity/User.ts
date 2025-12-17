@@ -1,28 +1,34 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Post } from './Post';
 import { Comment } from './Comment';
 import { Like } from './Like';
 
-@Entity()
+@Entity('users')
 export class User {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryColumn()
+  user_id!: number;
 
   @Column()
-  name!: string;
+  username!: string;
 
   @Column()
   email!: string;
 
-  @OneToMany(() => Post, post => post.author)
+  @Column({ nullable: true })
+  is_admin?: boolean;
+
+  @CreateDateColumn()
+  created_at!: Date;
+
+  @UpdateDateColumn()
+  updated_at!: Date;
+
+  @OneToMany(() => Post, post => post.user)
   posts!: Post[];
 
-  @OneToMany(() => Comment, comment => comment.author)
+  @OneToMany(() => Comment, comment => comment.user)
   comments!: Comment[];
 
   @OneToMany(() => Like, like => like.user)
   likes!: Like[];
-
-  @CreateDateColumn()
-  createdAt!: Date;
 }
