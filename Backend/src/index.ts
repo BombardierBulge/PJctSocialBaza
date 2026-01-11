@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import express from 'express';
-import { createConnection, getRepository } from 'typeorm';
+import { createConnection, getRepository, getConnection } from 'typeorm';
 import { User } from './entity/User';
 import { Post } from './entity/Post';
 import { Comment } from './entity/Comment';
@@ -115,7 +115,74 @@ Promise.all([mainConnection, authConnection]).then(async ([mainConn, authConn]) 
 }).catch(error => console.log(error));
 ///////////////////////////////////////////////////
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>SocialBaza API</title>
+      <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+        h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .group { margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; }
+        .group h2 { margin-top: 0; font-size: 1.2rem; color: #555; }
+        ul { list-style: none; padding: 0; }
+        li { margin-bottom: 8px; display: flex; align-items: center; }
+        .method { font-weight: bold; font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; margin-right: 10px; width: 50px; text-align: center; }
+        .get { background-color: #e7f5ff; color: #007bff; border: 1px solid #007bff; }
+        .post { background-color: #e6fffa; color: #00a082; border: 1px solid #00a082; }
+        a { text-decoration: none; color: #333; font-weight: 500; }
+        a:hover { text-decoration: underline; color: #0056b3; }
+        .note { font-size: 0.85rem; color: #777; margin-left: 10px; }
+      </style>
+    </head>
+    <body>
+      <h1>SocialBaza API - Mapa Endpointów</h1>
+      
+      <div class="group">
+        <h2>Użytkownicy (Users & Profiles)</h2>
+        <ul>
+          <li><span class="method get">GET</span> <a href="/User">/User</a> <span class="note">- Wszyscy użytkownicy</span></li>
+          <li><span class="method get">GET</span> <a href="/User/1">/User/:id</a> <span class="note">- Przykładowy user ID=1</span></li>
+          <li><span class="method get">GET</span> <a href="/User/username/jan_kowalski">/User/username/:username</a> <span class="note">- Szukanie po nicku</span></li>
+          <li><span class="method get">GET</span> <a href="/User/search/jan">/User/search/:q</a> <span class="note">- Wyszukiwarka (followers count)</span></li>
+          <li><span class="method get">GET</span> <a href="/UserProfile">/UserProfile</a> <span class="note">- Wszystkie profile</span></li>
+          <li><span class="method get">GET</span> <a href="/UserProfile/1">/UserProfile/:userId</a> <span class="note">- Profil konkretnego usera</span></li>
+        </ul>
+      </div>
+
+      <div class="group">
+        <h2>Posty (Posts & Feed)</h2>
+        <ul>
+          <li><span class="method get">GET</span> <a href="/Post">/Post</a> <span class="note">- Wszystkie posty</span></li>
+          <li><span class="method get">GET</span> <a href="/Post/1">/Post/:id</a> <span class="note">- Szczegóły posta</span></li>
+          <li><span class="method post">POST</span> <span>/Post</span> <span class="note">- Dodawanie posta (wymaga JSON, użyj cURL/Postman)</span></li>
+          <li><span class="method get">GET</span> <a href="/Feed/2">/Feed/:userId</a> <span class="note">- Feed dla usera ID=2 (posty obserwowanych)</span></li>
+        </ul>
+      </div>
+
+      <div class="group">
+        <h2>Interakcje (Comments, Likes, Follows)</h2>
+        <ul>
+          <li><span class="method get">GET</span> <a href="/Comment">/Comment</a> <span class="note">- Wszystkie komentarze</span></li>
+          <li><span class="method get">GET</span> <a href="/Comment/post/1">/Comment/post/:postId</a> <span class="note">- Komentarze do posta ID=1</span></li>
+          <li><span class="method get">GET</span> <a href="/Like">/Like</a> <span class="note">- Wszystkie lajki</span></li>
+          <li><span class="method get">GET</span> <a href="/Like/post/1">/Like/post/:postId</a> <span class="note">- Lajki posta ID=1</span></li>
+          <li><span class="method get">GET</span> <a href="/Follow">/Follow</a> <span class="note">- Wszystkie relacje obserwowania</span></li>
+        </ul>
+      </div>
+
+      <div class="group">
+        <h2>Bezpieczeństwo (Auth)</h2>
+        <ul>
+          <li><span class="method get">GET</span> <a href="/UserPassword">/UserPassword</a> <span class="note">- Lista haseł (hashy)</span></li>
+          <li><span class="method get">GET</span> <a href="/UserPassword/1">/UserPassword/:userId</a> <span class="note">- Hasło usera ID=1</span></li>
+        </ul>
+      </div>
+
+    </body>
+    </html>
+  `;
+  res.send(html);
 });
 
 app.get('/User', async (req, res) => {
@@ -123,6 +190,60 @@ app.get('/User', async (req, res) => {
     const userRepository = getRepository(User, 'main');
     const users = await userRepository.find({ relations: ['posts', 'comments', 'likes'] });
     res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// get user by id
+app.get('/User/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+    const userRepository = getRepository(User, 'main');
+    const user = await userRepository.findOne({ where: { user_id: id }, relations: ['posts', 'comments', 'likes'] });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// get user by username/username
+app.get('/User/username/:username', async (req, res) => {
+  try {
+    const username = req.params.username;
+    if (!username) return res.status(400).json({ error: 'Invalid username' });
+    const userRepository = getRepository(User, 'main');
+    const user = await userRepository.findOne({ where: { username: username }, relations: ['posts', 'comments', 'likes'] });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// search users with follower count
+app.get('/User/search/:q', async (req, res) => {
+  try {
+    const q = req.params.q;
+    if (!q) return res.status(400).json({ error: 'Invalid query' });
+    const userRepository = getRepository(User, 'main');
+    const sql = `
+      SELECT u.user_id, u.username,
+        up."avatarUrl" AS avatar_url,
+        up."bio",
+        (SELECT COUNT(*) FROM follows f WHERE f.followed_id = u.user_id) AS follower_count
+      FROM users u
+      INNER JOIN user_profile up ON u.user_id = up."userId"
+      WHERE u.username ILIKE '%' || $1 || '%'
+        OR up."bio" ILIKE '%' || $1 || '%'
+        OR up."website" ILIKE '%' || $1 || '%'
+      ORDER BY follower_count DESC, u.username
+      LIMIT 10;`;
+
+    const results = await userRepository.query(sql, [q]);
+    res.json(results);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -138,6 +259,63 @@ app.get('/Post', async (req, res) => {
   }
 });
 
+// create post with validation inside a transaction
+app.post('/Post', async (req, res) => {
+  // 1. Walidacja danych wejściowych
+  const { user_id, content } = req.body;
+  if (!user_id || typeof content !== 'string' || content.trim() === '') {
+    return res.status(400).json({ error: 'Invalid payload' });
+  }
+
+  const connection = getConnection('main');
+  const queryRunner = connection.createQueryRunner();
+
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    const entityManager = queryRunner.manager;
+
+    // 2. Sprawdzenie, czy użytkownik istnieje
+    const user = await entityManager.findOne(User, { where: { user_id } });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // 3. Tworzenie posta
+    const newPost = new Post();
+    newPost.user_id = user_id;
+    newPost.content = content;
+    
+    // Daty nadal musimy ustawić (chyba że w bazie też ustawiłeś DEFAULT NOW())
+    newPost.created_at = new Date();
+    newPost.updated_at = new Date();
+
+    // 4. Zapis do bazy
+    // TypeORM wyśle zapytanie INSERT bez ID, a baza nada kolejny numer
+    const savedPost = await entityManager.save(Post, newPost);
+
+    await queryRunner.commitTransaction();
+    
+    // Zwracamy zapisany obiekt (będzie zawierał nowe post_id nadane przez bazę)
+    return res.status(201).json(savedPost);
+
+  } catch (err) {
+    await queryRunner.rollbackTransaction();
+
+    // Obsługa błędów
+    const errorObj = err as Error;
+    
+    if (errorObj.message === 'User not found') {
+      return res.status(404).json({ error: errorObj.message });
+    }
+
+    console.error('Transaction error:', errorObj);
+    return res.status(500).json({ error: 'Could not create post' });
+  } finally {
+    await queryRunner.release();
+  }
+});
 // post z id
 app.get('/Post/:id', async (req, res) => {
   try {
@@ -147,6 +325,36 @@ app.get('/Post/:id', async (req, res) => {
     const post = await postRepository.findOne({ where: { post_id: id }, relations: ['user', 'comments', 'likes'] });
     if (!post) return res.status(404).json({ error: 'Post not found' });
     res.json(post);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Home feed: posts from users followed by :userId with counts
+app.get('/Feed/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (Number.isNaN(userId)) return res.status(400).json({ error: 'Invalid userId' });
+    const postRepository = getRepository(Post, 'main');
+    const sql = `
+      SELECT p.post_id, p.content, p.created_at,
+        u.username AS author_username,
+        up."avatarUrl" AS author_avatar,
+        COUNT(DISTINCT l.like_id) AS like_count,
+        COUNT(DISTINCT c.comment_id) AS comment_count
+      FROM posts p
+      INNER JOIN users u ON p.user_id = u.user_id
+      INNER JOIN user_profile up ON u.user_id = up."userId"
+      INNER JOIN follows f ON f.followed_id = u.user_id
+      LEFT JOIN likes l ON p.post_id = l.post_id
+      LEFT JOIN comments c ON p.post_id = c.post_id
+      WHERE f.follower_id = $1
+      GROUP BY p.post_id, p.content, p.created_at, u.user_id, u.username, up."avatarUrl"
+      ORDER BY p.created_at DESC
+      LIMIT 20;`;
+
+    const feed = await postRepository.query(sql, [userId]);
+    res.json(feed);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

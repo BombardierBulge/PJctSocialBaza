@@ -1,11 +1,11 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
 import { User } from './User';
 import { Comment } from './Comment';
 import { Like } from './Like';
 
 @Entity('posts')
 export class Post {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn({ name: 'post_id' })
   post_id!: number;
 
   @Column()
