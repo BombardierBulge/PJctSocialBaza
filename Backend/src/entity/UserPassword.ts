@@ -1,10 +1,14 @@
-import { Entity, PrimaryColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
 
 @Entity('user_passwords')
 export class UserPassword {
-  @PrimaryColumn()
-  user_id!: number;
 
-  @Column()
-  password_hash!: string;
+    @PrimaryGeneratedColumn() 
+    id!: number;
+
+    @Column() 
+    user_id!: number; 
+
+    @Column()
+    password_hash!: string;
 }

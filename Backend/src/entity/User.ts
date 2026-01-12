@@ -1,11 +1,12 @@
-import { Entity, PrimaryColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Post } from './Post';
 import { Comment } from './Comment';
 import { Like } from './Like';
 
 @Entity('users')
 export class User {
-  @PrimaryColumn()
+
+  @PrimaryGeneratedColumn()
   user_id!: number;
 
   @Column()
@@ -14,7 +15,7 @@ export class User {
   @Column()
   email!: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, default: false })
   is_admin?: boolean;
 
   @CreateDateColumn()

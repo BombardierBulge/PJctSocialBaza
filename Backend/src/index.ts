@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import bcrypt from 'bcrypt';
 import express from 'express';
 import { createConnection, getRepository, getConnection } from 'typeorm';
 import { User } from './entity/User';
@@ -469,4 +470,159 @@ app.get('/UserPassword/:userId', async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Rejestracja nowego użytkownika
+app.post('/User', async (req, res) => {
+  // 1. Walidacja danych wejściowych
+  const { username, email, password, bio, avatarUrl, location, website } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ error: 'Username, email and password are required' });
+  }
+
+  // Połączenie do obu baz
+  const mainConnection = getConnection('main');
+  const authConnection = getConnection('auth');
+
+  const queryRunner = mainConnection.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    const entityManager = queryRunner.manager;
+
+    // 2. Sprawdzenie unikalności 
+    const existingUserCount = await entityManager.count(User, {
+      where: [
+        { username: username },
+        { email: email }
+      ]
+    });
+
+    if (existingUserCount > 0) {
+      throw new Error('Username or Email already taken');
+    }
+
+    // 3. Tworzenie Użytkownika (Tabela Users - baza Main)
+    const newUser = new User();
+    newUser.username = username;
+    newUser.email = email;
+    newUser.is_admin = false;
+
+    // Zapisujemy w transakcji, aby baza nadała ID
+    const savedUser = await entityManager.save(User, newUser);
+    const newUserId = savedUser.user_id; 
+
+    console.log(`[DEBUG] Utworzono usera w bazie Main. ID: ${newUserId}`);
+
+    // 4. Tworzenie Profilu (Tabela UserProfile - baza Main)
+    const newProfile = new UserProfile();
+    newProfile.userId = newUserId;
+    newProfile.bio = bio || '';
+    newProfile.avatarUrl = avatarUrl || null;
+    newProfile.location = location || null;
+    newProfile.website = website || null;
+
+    await entityManager.save(UserProfile, newProfile);
+
+    // 5. Zapisywanie Hasła (Tabela UserPassword - baza Auth)
+    try {
+      const passwordRepo = authConnection.getRepository(UserPassword);
+      
+      // --- HASHOWANIE HASŁA ---
+      const saltRounds = 10; // Siła szyfrowania
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      // ------------------------
+
+      const newPass = new UserPassword();
+      newPass.user_id = newUserId; 
+      
+      // Zapisujemy ZAHASHOWANE hasło
+      newPass.password_hash = hashedPassword; 
+
+      await passwordRepo.save(newPass);
+      console.log(`[DEBUG] Zapisano bezpieczne hasło w bazie Auth dla user_id: ${newUserId}`);
+
+    } catch (authError) {
+      console.error('Błąd zapisu hasła w bazie Auth:', authError);
+      throw new Error('Failed to save password security data');
+    }
+
+    // 6. zatwierdzamy zmiany w bazie Main
+    await queryRunner.commitTransaction();
+
+    res.status(201).json({
+      message: 'User created successfully',
+      user: savedUser,
+      profile: newProfile
+    });
+
+  } catch (err) {
+    // jeżeli błąd cofamy zmiany w Users i UserProfile
+    await queryRunner.rollbackTransaction();
+
+    const errorObj = err as Error;
+    console.error('Registration transaction rolled back. Reason:', errorObj.message);
+
+    if (errorObj.message === 'Username or Email already taken') {
+      return res.status(409).json({ error: errorObj.message });
+    }
+
+    res.status(500).json({ error: errorObj.message || 'Could not create user' });
+  } finally {
+    await queryRunner.release();
+  }
+});
+
+// Logowanie użytkownika
+app.post('/Login', async (req, res) => {
+  const { username, password } = req.body;
+  // 1. Walidacja danych wejściowych
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  try {
+    const mainConnection = getConnection('main');
+    const authConnection = getConnection('auth');
+
+    // 2. Pobieramy użytkownika z bazy głównej
+    const userRepo = mainConnection.getRepository(User);
+    const user = await userRepo.findOne({ where: { username: username } });
+
+    if (!user) {
+
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+    // 3. Pobieramy hash hasła z Bazy Auth
+    const passRepo = authConnection.getRepository(UserPassword);
+    const authData = await passRepo.findOne({ where: { user_id: user.user_id } });
+
+    if (!authData) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // 4. Weryfikujemy hasło za pomocą bcrypt
+    const isPasswordValid = await bcrypt.compare(password, authData.password_hash);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+
+    res.json({
+      message: 'Login successful!',
+      user: {
+        id: user.user_id,
+        username: user.username,
+        email: user.email,
+        is_admin: user.is_admin
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
