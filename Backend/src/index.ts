@@ -37,7 +37,7 @@ const authConnection = createConnection({
   port: parseInt(process.env.DB_PORT || '5432'),
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'password',
-  database: 'socialbaza_auth',
+  database: process.env.DB_DATABASE_AUTH || 'socialbaza_auth',
   entities: [UserPassword],
   synchronize: true,
   logging: false,
