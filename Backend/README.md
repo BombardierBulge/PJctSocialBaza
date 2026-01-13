@@ -1,135 +1,98 @@
 # Social Media Backend
 
-Backend systemu społecznościowego oparty na architekturze z dwiema bazami danych (Main + Auth), wykorzystujący REST API, PostgreSQL oraz transakcje rozproszone.
+Backend platformy SocialBaza oparty na **Node.js** + **TypeScript**. Wykorzystuje **modularną architekturę kontrolerów** i komunikuje się z bazami danych **PostgreSQL** poprzez **TypeORM**.
 
-## Funkcjonalności
+##  Architektura
 
-* **Rejestracja i Logowanie:** Bezpieczne tworzenie konta i weryfikacja tożsamości.
-* **Bezpieczeństwo:** Hasła są hashowane przy użyciu `bcrypt` i przechowywane w odseparowanej bazie danych.
-* **Użytkownicy i Profile:** Zarządzanie danymi osobowymi.
-* **Interakcje:** Posty, komentarze, system polubień, relacje obserwowania.
-* **Architektura:** Rozdzielenie danych biznesowych (Main DB) od danych uwierzytelniających (Auth DB).
+System został zaprojektowany z myślą o bezpieczeństwie i skalowalności:
+*   **Główna Baza Danych (`socialbaza`)**: Przechowuje dane biznesowe (Użytkownicy, Posty, Komentarze, Polubienia, Profile, Obserwacje).
+*   **Baza Uwierzytelniania (`socialbaza_auth`)**: Przechowuje wrażliwe dane uwierzytelniające (Hashe haseł) oddzielnie.
+*   **Modularne Kontrolery**: Logika jest rozdzielona pomiędzy `AuthController`, `UserController`, `PostController`, `InteractionController` oraz `AdminController`.
 
-## Technologie
+##  Pierwsze kroki
 
-* **Runtime:** Node.js + Express
-* **Język:** TypeScript
-* **ORM:** TypeORM
-* **Baza danych:** PostgreSQL (x2)
-* **Bezpieczeństwo:** bcrypt (hashowanie haseł)
-* **Inne:** dotenv, body-parser
-
-## Szybki start
-
-### Wymagania
-
-* Node.js 14+
-* PostgreSQL 12+
+### Wymagania wstępne
+*   Node.js 16+
+*   PostgreSQL 12+
 
 ### Instalacja
 
-```bash
-# 1. Klonuj repozytorium
-git clone <twoje-repo>
-cd <nazwa-projektu>
+1.  Przejdź do katalogu Backend:
+    ```bash
+    cd Backend
+    ```
+2.  Zainstaluj zależności:
+    ```bash
+    npm install
+    ```
+3.  Skonfiguruj Zmienne Środowiskowe:
+    *   Utwórz plik `.env` na podstawie `.env.example`.
+    *   Upewnij się, że dane logowania do bazy danych są poprawne.
 
-# 2. Zainstaluj zależności
-npm install
+4.  Uruchom Serwer:
+    *   **Development**:
+        ```bash
+        npm run dev
+        ```
+    *   **Produkcja**:
+        ```bash
+        npm start
+        ```
+    *   Serwer działa domyślnie na porcie `3000`.
 
-# 3. Skonfiguruj bazy danych
-createdb socialbaza_main      # Baza główna
-createdb socialbaza_auth      # Baza autoryzacji
+---
 
-# (Opcjonalnie) Jeśli posiadasz pliki backupu .sql:
-# psql -d socialbaza_main < socialbaza_main_backup.sql
-# psql -d socialbaza_auth < socialbaza_auth_backup.sql
+##  Endpointy API
 
-# 4. Zmienne środowiskowe
-cp .env.example .env
-# Upewnij się, że dane w .env pasują do Twojej konfiguracji PostgreSQL!
+###  Uwierzytelnianie (`AuthController`)
+*   `POST /User` - **Rejestracja** nowego użytkownika. (Transakcyjna)
+*   `POST /Login` - **Logowanie** (zwraca obiekt użytkownika + avatarUrl).
+*   `GET /UserPassword` - (Debug) Podgląd zahashowanych haseł.
 
-# 5. Uruchom aplikację
-npm run dev
+###  Użytkownicy i Profile (`UserController`)
+*   `GET /User` - Lista wszystkich użytkowników.
+*   `GET /User/:id` - Szczegóły użytkownika po ID.
+*   `GET /User/search/:q` - **Wyszukiwanie** użytkowników po nazwie (Sortowane po liczbie obserwujących).
+*   `GET /UserProfile` - Lista wszystkich profili.
+*   `GET /UserProfile/:userId` - Pełny profil (Bio, Statystyki, Posty) konkretnego użytkownika.
+*   `PUT /UserProfile` - **Aktualizacja Profilu** (Bio, Lokalizacja, Strona WWW). (Transakcyjna)
+*   `PUT /UserProfile/avatar` - **Przesyłanie Awatara** (Multipart/Form-Data). (Transakcyjna)
 
-```
+###  Posty (`PostController`)
+*   `GET /Post` - Lista wszystkich postów (z autorami, polubieniami, komentarzami).
+*   `POST /Post` - Tworzenie nowego posta (Obsługuje obrazki w Markdown/Upload).
+*   `GET /Post/:id` - Pobranie konkretnego posta.
+*   `PUT /Post/:id` - Edycja posta.
+*   `DELETE /Post/:id` - Usuwanie posta (Właściciel lub Admin).
+*   `GET /Feed/:userId` - Spersonalizowany strumień (feed). **Algorytm**: Obserwowani -> Popularne -> Najnowsze.
 
-## API Endpoints
+###  Interakcje (`InteractionController`)
+*   `POST /Like/toggle` - Polub/Odlub post.
+*   `GET /Like` - Lista wszystkich polubień.
+*   `GET /Like/post/:postId` - Polubienia dla konkretnego posta.
+*   `POST /Comment` - Dodaj komentarz.
+*   `GET /Comment` - Lista wszystkich komentarzy.
+*   `GET /Comment/post/:postId` - Pobierz komentarze dla posta.
+*   `PUT /Comment/:id` - Edycja komentarza (Właściciel).
+*   `DELETE /Comment/:id` - Usuń komentarz (Właściciel lub Admin).
+*   `POST /Follow/toggle` - Obserwuj/Przestań obserwować użytkownika.
+*   `GET /Follow` - Lista wszystkich relacji obserwowania.
 
-### Autentykacja (POST)
+###  Admin (`AdminController`)
+*   `POST /Admin/toggle` - **Nadaj lub Odbierz** uprawnienia Administratora.
+    *   *Payload*: `{ target_user_id: number }`
+    *   *Nagłówki*: `x-user-id` (ID Wnioskującego, musi być adminem).
+    *   *Logi*: Akcje są zapisywane w pliku `admin_actions.log`.
 
-**Rejestracja użytkownika:**
-`POST /User`
+###  Pliki
+*   `POST /upload` - **Przesyłanie Obrazka**. Zwraca ścieżkę do pliku.
+    *   Odpowiedź: `{ "path": "/uploads/filename.jpg" }`
 
-```json
-{
-  "username": "bocian",
-  "email": "test@test.pl",
-  "password": "silne_haslo",
-  "bio": "Programista Node.js",
-  "location": "PL"
-}
+---
 
-```
-
-**Logowanie:**
-`POST /Login`
-
-```json
-{
-  "username": "bocian",
-  "password": "silne_haslo"
-}
-
-```
-
-### Dane (GET)
-
-* `GET /User` - lista użytkowników
-* `GET /Post` - lista wszystkich postów
-* `GET /Post/:id` - szczegóły konkretnego posta
-* `GET /Comment/post/:postId` - komentarze dla danego posta
-* `GET /UserProfile/:userId` - profil użytkownika
-
-### Testowanie
-
-```bash
-# Pobranie listy userów
-curl http://localhost:3000/User
-
-# Próba logowania
-curl -X POST -H "Content-Type: application/json" -d '{"username":"bocian", "password":"silne_haslo"}' http://localhost:3000/Login
-
-```
-
-## Struktura Baz Danych
-
-System wykorzystuje dwie instancje/bazy PostgreSQL dla zwiększenia bezpieczeństwa:
-
-1. **socialbaza_main** – przechowuje dane publiczne/biznesowe:
-* `users` (dane jawne: login, email)
-* `user_profiles` (bio, awatar)
-* `posts`, `comments`, `likes`
-
-
-2. **socialbaza_auth** – przechowuje dane wrażliwe:
-* `user_passwords` (hashed password + referencja do user_id)
-
-
-
-## Skrypty
-
-```bash
-npm run dev      # Tryb developerski (nodemon)
-npm run build    # Kompilacja TypeScript do JavaScript
-npm start        # Uruchomienie wersji produkcyjnej (z folderu dist)
-
-```
-
-## Uwagi
-
-* Pamiętaj, aby plik `.env` zawierał poprawne poświadczenia do obu baz danych.
-* Hasła w bazie `socialbaza_auth` są nieodwracalnie zahashowane (nie są widoczne tekstem jawnym).
-
-## Licencja
-
-MIT
+##  Stos Technologiczny
+*   **Express**: Framework webowy.
+*   **TypeORM**: ORM do bazy danych.
+*   **PostgreSQL**: Baza danych.
+*   **Multer**: Przesyłanie plików.
+*   **Bcrypt**: Hashowanie haseł.

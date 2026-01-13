@@ -1,16 +1,68 @@
-# React + Vite
+# SocialBaza Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Nowoczesny, responsywny interfejs mediów społecznościowych zbudowany w oparciu o **React** i **Vite**.
 
-Currently, two official plugins are available:
+## 🚀 Pierwsze kroki
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Wymagania wstępne
+- Zainstalowane środowisko Node.js
 
-## React Compiler
+### Instalacja
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Przejdź do katalogu Frontend:
+   ```bash
+   cd Frontend
+   ```
+2. Zainstaluj zależności:
+   ```bash
+   npm install
+   ```
 
-## Expanding the ESLint configuration
+### Uruchamianie aplikacji
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Uruchom serwer deweloperski:
+```bash
+npm run dev
+```
+Aplikacja będzie dostępna pod adresem `http://localhost:5173`.
+
+---
+
+## 📱 Funkcje i Ekrany
+
+### 1. **Uwierzytelnianie**
+- **Logowanie**: Bezpieczne logowanie za pomocą Emaila lub Nazwy użytkownika. Obsługa trwałych sesji poprzez LocalStorage.
+- **Rejestracja**: Tworzenie nowego konta z nazwą użytkownika, e-mailem i hasłem.
+
+### 2. **Strona Główna (Feed)**
+- **Przeglądanie Postów**: Przewijaj strumień postów od wszystkich użytkowników.
+- **Tworzenie Postów**: Dziel się przemyśleniami za pomocą tekstu i **zdjęć** (obsługa przesyłania plików).
+- **Interakcje**:
+  - **Polubienia**: Lajkuj posty, aby okazać uznanie.
+  - **Komentarze**: Komentuj posty, aby dołączyć do dyskusji.
+  - **Usuwanie**: Usuwaj własne posty (lub dowolne, jeśli jesteś Administratorem).
+
+### 3. **Profile**
+- **Profil Użytkownika**: Wyświetlaj szczegóły użytkownika, biogram, lokalizację i stronę www.
+- **Zarządzanie Awatarem**: Prześlij własne zdjęcie profilowe (kliknij na swój awatar).
+- **System Obserwacji**: Obserwuj/Przestań obserwować użytkowników, aby budować swoją sieć.
+- **Historia Postów**: Przeglądaj wszystkie posty opublikowane przez konkretnego użytkownika.
+
+### 4. **Wyszukiwanie**
+- **Znajdź Użytkowników**: Szukaj innych użytkowników po nazwie, aby znaleźć ich profile.
+
+### 5. **Panel Administratora** (Dostęp Ograniczony)
+- *Dostępny tylko dla użytkowników z uprawnieniami Administratora.*
+- **Lista Użytkowników**: Przeglądaj tabelę wszystkich zarejestrowanych użytkowników.
+- **Wyszukiwanie**: Filtruj użytkowników po nazwie lub e-mailu.
+- **Zarządzanie Uprawnieniami**: Przełączaj status "Admin" dla dowolnego użytkownika (Nadaj/Odbierz).
+
+---
+
+## 🛠 Stos Technologiczny
+
+- **Framework**: React
+- **Narzędzie budowania**: Vite
+- **Style**: Czysty CSS (Własny Design System)
+- **Klient HTTP**: Axios
+- **Routing**: React Router DOM

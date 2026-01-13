@@ -1,10 +1,10 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, JoinColumn } from 'typeorm';
 import { User } from './User';
 import { Post } from './Post';
 
 @Entity('likes')
 export class Like {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn()
   like_id!: number;
 
   @Column()

@@ -1,10 +1,10 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, JoinColumn } from 'typeorm';
 import { User } from './User';
 import { Post } from './Post';
 
 @Entity('comments')
 export class Comment {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn()
   comment_id!: number;
 
   @Column()
