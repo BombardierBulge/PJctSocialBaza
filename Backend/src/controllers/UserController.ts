@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getRepository } from 'typeorm';
 import { User } from '../entity/User';
 import { UserProfile } from '../entity/UserProfile';
+import { Post } from '../entity/Post';
 import { Follow } from '../entity/Follow';
 import fs from 'fs';
 import path from 'path';
@@ -25,8 +26,13 @@ export const UserController = {
             const user = users[0];
 
             if (user) {
-                // Pobranie postów
-                const posts = await userRepository.query(`SELECT * FROM posts WHERE user_id = $1`, [id]);
+                // Pobranie postów z relacjami
+                const postRepository = getRepository(Post, 'main');
+                const posts = await postRepository.find({
+                    where: { user_id: id },
+                    relations: ['user', 'likes', 'comments', 'comments.user'],
+                    order: { created_at: 'DESC' }
+                });
                 user.posts = posts;
             }
 
@@ -35,7 +41,6 @@ export const UserController = {
             res.status(500).json({ error: (error as Error).message });
         }
     },
-
     searchUsers: async (req: Request, res: Response) => {
         try {
             const query = req.params.q;
@@ -71,7 +76,6 @@ export const UserController = {
             res.status(500).json({ error: (error as Error).message });
         }
     },
-
     getProfileByUserId: async (req: Request, res: Response) => {
         try {
             const userId = parseInt(req.params.userId);
@@ -86,7 +90,13 @@ export const UserController = {
             if (!user && !profile) return res.status(404).json({ error: 'Not found' });
 
             if (user) {
-                const posts = await profileRepository.query(`SELECT * FROM posts WHERE user_id = $1`, [userId]);
+                const postRepository = getRepository(Post, 'main');
+                // Używamy TypeORM find aby pobrać relacje (lajki, komentarze)
+                const posts = await postRepository.find({
+                    where: { user_id: userId },
+                    relations: ['user', 'likes', 'comments', 'comments.user'],
+                    order: { created_at: 'DESC' }
+                });
                 user.posts = posts;
             }
 

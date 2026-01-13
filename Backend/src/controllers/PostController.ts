@@ -23,6 +23,7 @@ export const PostController = {
           SELECT c.*, u.username as author_name 
           FROM comments c 
           LEFT JOIN users u ON c.user_id = u.user_id
+          ORDER BY c.created_at ASC
       `);
 
             const posts = rawPosts.map((p: any) => ({
@@ -67,7 +68,7 @@ export const PostController = {
             post.user = users[0];
 
             post.likes = await repository.query(`SELECT * FROM likes WHERE post_id = $1`, [id]);
-            post.comments = await repository.query(`SELECT * FROM comments WHERE post_id = $1`, [id]);
+            post.comments = await repository.query(`SELECT * FROM comments WHERE post_id = $1 ORDER BY created_at ASC`, [id]);
 
             res.json(post);
         } catch (error) {

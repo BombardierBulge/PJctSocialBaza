@@ -13,7 +13,7 @@ function LoginPage() {
     setError('');
 
     if (!username || !password) {
-      setError("Wpisz login i hasło!");
+      setError("Please enter username and password!");
       return;
     }
 
@@ -29,7 +29,7 @@ function LoginPage() {
       if (err.response && err.response.data && err.response.data.error) {
         setError(err.response.data.error);
       } else {
-        setError("Błąd logowania. Sprawdź serwer.");
+        setError("Login error. Check server.");
       }
     }
   };
@@ -61,7 +61,7 @@ function LoginPage() {
               className="input-field"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. jan_kowalski"
+              placeholder="e.g. john_doe"
             />
           </div>
 

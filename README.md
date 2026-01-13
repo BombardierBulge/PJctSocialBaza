@@ -2,14 +2,14 @@
 
 Kompletna aplikacja społecznościowa z modularnym backendem **Node.js** i frontendem **React**.
 
-## 📚 Struktura Projektu
+## Struktura Projektu
 
 Projekt podzielony jest na dwa główne komponenty:
 
 *   **[Frontend](./Frontend/README.md)**: Interfejs użytkownika zbudowany w oparciu o React + Vite.
 *   **[Backend](./Backend/README.md)**: Serwer API zbudowany w oparciu o Node.js + Express + TypeORM.
 
-## ✨ Kluczowe Funkcje
+## Kluczowe Funkcje
 
 *   **Pełny proces uwierzytelniania**: Rejestracja, Logowanie, Wylogowanie (z bezpiecznym hashowaniem haseł).
 *   **Inteligentny Feed**: Algorytm priorytetyzujący posty obserwowanych użytkowników i popularne treści.
@@ -23,7 +23,7 @@ Projekt podzielony jest na dwa główne komponenty:
     *   Moderacja treści (Usuwanie dowolnego posta/komentarza).
     *   Szczegółowe logowanie akcji administracyjnych.
 
-## 🚀 Przewodnik Szybkiego Startu
+## Przewodnik Szybkiego Startu
 
 Aby uruchomić całą aplikację lokalnie, będziesz potrzebować dwóch okien terminala.
 
@@ -46,12 +46,12 @@ npm run dev
 
 ---
 
-## 🏗 Przegląd Architektury
+## Przegląd Architektury
 
 *   **Separacja Baz Danych**: `socialbaza` (Dane Główne) i `socialbaza_auth` (Dane Uwierzytelniające) są przechowywane w oddzielnych bazach PostgreSQL dla zwiększenia bezpieczeństwa.
 *   **Transakcje**: Operacje krytyczne (takie jak Rejestracja) wykorzystują symulację transakcji rozproszonych, aby zapewnić spójność danych między obiema bazami.
 
-## 📄 Dokumentacja
+## Dokumentacja
 
 Szczegółowe instrukcje dotyczące endpointów API lub ekranów Frontendu znajdują się w dedykowanych plikach README w każdym katalogu:
 

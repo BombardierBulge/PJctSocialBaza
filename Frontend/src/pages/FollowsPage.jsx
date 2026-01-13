@@ -47,7 +47,7 @@ function FollowsPage() {
                   @{follow.followed_name}
                 </Link>
                 <div style={{ fontSize: '0.8rem', color: '#888' }}>
-                  Followed since {follow.created_at ? new Date(follow.created_at).toLocaleDateString() : 'Recently'}
+                  Followed since {follow.created_at ? new Date(follow.created_at).toLocaleDateString('en-US') : 'Recently'}
                 </div>
               </div>
             </li>

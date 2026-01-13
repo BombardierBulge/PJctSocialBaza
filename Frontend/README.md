@@ -2,7 +2,7 @@
 
 Nowoczesny, responsywny interfejs mediów społecznościowych zbudowany w oparciu o **React** i **Vite**.
 
-## 🚀 Pierwsze kroki
+## Pierwsze kroki
 
 ### Wymagania wstępne
 - Zainstalowane środowisko Node.js
@@ -28,7 +28,7 @@ Aplikacja będzie dostępna pod adresem `http://localhost:5173`.
 
 ---
 
-## 📱 Funkcje i Ekrany
+## Funkcje i Ekrany
 
 ### 1. **Uwierzytelnianie**
 - **Logowanie**: Bezpieczne logowanie za pomocą Emaila lub Nazwy użytkownika. Obsługa trwałych sesji poprzez LocalStorage.
@@ -59,7 +59,7 @@ Aplikacja będzie dostępna pod adresem `http://localhost:5173`.
 
 ---
 
-## 🛠 Stos Technologiczny
+## Stos Technologiczny
 
 - **Framework**: React
 - **Narzędzie budowania**: Vite

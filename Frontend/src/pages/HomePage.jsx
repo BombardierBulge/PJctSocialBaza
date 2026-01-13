@@ -10,15 +10,23 @@ function HomePage() {
 
   // Stan użytkownika
   const user = JSON.parse(localStorage.getItem('user'));
+  // Obsługa różnic w nazewnictwie id/user_id
+  const currentUserId = user ? (user.id || user.user_id) : null;
+
   const [newPostContent, setNewPostContent] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
 
-  // Stan komentarzy: { [postId]: { show: boolean, content: string } }
+  // Stan komentarzy i edycji
   const [commentState, setCommentState] = useState({});
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editCommentContent, setEditCommentContent] = useState('');
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editPostContent, setEditPostContent] = useState('');
 
   const fetchPosts = async () => {
     try {
       const response = await api.get('/Post');
+      // Sortowanie postów: Najnowsze na górze
       const sortedPosts = response.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setPosts(sortedPosts);
     } catch (err) {
@@ -52,14 +60,13 @@ function HomePage() {
         const formData = new FormData();
         formData.append('file', selectedFile);
         const uploadRes = await api.post('/upload', formData);
-        // Dodaj obraz lub ścieżkę do treści
         if (uploadRes.data.path) {
           contentToPost += `\n![Image](${api.defaults.baseURL}${uploadRes.data.path})`;
         }
       }
 
       await api.post('/Post', {
-        user_id: user.id || user.user_id,
+        user_id: currentUserId,
         content: contentToPost
       });
 
@@ -68,52 +75,77 @@ function HomePage() {
       fetchPosts();
     } catch (err) {
       alert(`Failed to create post: ${err.message}`);
-      console.error("Post creation failed:", err.response ? err.response.data : err);
     } finally {
       setUploading(false);
     }
   };
 
-  // ...
+  // --- Handlery Interakcji ---
 
-  // Stan edycji komentarza
-  const [editingCommentId, setEditingCommentId] = useState(null);
-  const [editCommentContent, setEditCommentContent] = useState('');
-
-  // ...
-
-  const handleDeleteComment = async (commentId) => {
-    // Usunięto window.confirm
+  const handleLike = async (postId) => {
+    if (!user) return;
     try {
-      await api.delete(`/Comment/${commentId}`, {
-        headers: { 'x-user-id': user.id || user.user_id }
+      await api.post('/Like/toggle', {
+        post_id: postId,
+        user_id: currentUserId
       });
-      fetchPosts();
-    } catch (err) {
-      console.error("Failed to delete comment");
+      fetchPosts(); // Odśwież widok
+    } catch (e) {
+      console.error("Like error", e);
     }
   };
 
-  // Stan edycji (Post)
-  const [editingPostId, setEditingPostId] = useState(null);
-  const [editContent, setEditContent] = useState('');
+  const toggleCommentSection = (postId) => {
+    setCommentState(prev => ({
+      ...prev,
+      [postId]: { ...prev[postId], show: !prev[postId]?.show }
+    }));
+  };
+
+  const handleCommentChange = (postId, value) => {
+    setCommentState(prev => ({
+      ...prev,
+      [postId]: { ...prev[postId], content: value }
+    }));
+  };
+
+  const submitComment = async (postId) => {
+    const content = commentState[postId]?.content;
+    if (!content || !content.trim()) return;
+
+    try {
+      await api.post('/Comment', {
+        post_id: postId,
+        user_id: currentUserId,
+        content: content
+      });
+      // Reset pola
+      setCommentState(prev => ({
+        ...prev,
+        [postId]: { ...prev[postId], content: '' }
+      }));
+      fetchPosts();
+    } catch (e) {
+      console.error("Comment submit error", e);
+    }
+  };
 
   const startEditing = (post) => {
     setEditingPostId(post.post_id);
-    setEditContent(post.content);
+    setEditPostContent(post.content);
   };
 
   const cancelEditing = () => {
     setEditingPostId(null);
-    setEditContent('');
+    setEditPostContent('');
   };
 
   const saveEdit = async (postId) => {
     try {
       await api.put(`/Post/${postId}`, {
-        content: editContent
+        content: editPostContent
       }, {
-        headers: { 'x-user-id': user.id || user.user_id }
+        headers: { 'x-user-id': currentUserId }
       });
       setEditingPostId(null);
       fetchPosts();
@@ -123,10 +155,10 @@ function HomePage() {
   };
 
   const handleDeletePost = async (postId) => {
-    // Removed window.confirm
+    if (!window.confirm("Delete post?")) return;
     try {
       await api.delete(`/Post/${postId}`, {
-        headers: { 'x-user-id': user.id || user.user_id }
+        headers: { 'x-user-id': currentUserId }
       });
       fetchPosts();
     } catch (err) {
@@ -134,21 +166,60 @@ function HomePage() {
     }
   };
 
-  // Helper do renderowania treści z obrazami
+  // Komentarze - Edycja/Usuwanie
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await api.delete(`/Comment/${commentId}`, {
+        headers: { 'x-user-id': currentUserId }
+      });
+      fetchPosts();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const startEditingComment = (comment) => {
+    setEditingCommentId(comment.comment_id);
+    setEditCommentContent(comment.content);
+  };
+
+  const saveCommentEdit = async (commentId) => {
+    try {
+      await api.put(`/Comment/${commentId}`, { content: editCommentContent }, {
+        headers: { 'x-user-id': currentUserId }
+      });
+      setEditingCommentId(null);
+      fetchPosts();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Funkcje pomocnicze
+  const routerSafeUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${api.defaults.baseURL}${url}`;
+  };
+
   const renderContent = (content) => {
-    const parts = content.split(/(!\[Image\]\((.*?)\))/g);
-    return parts.map((part, i) => {
-      if (part.startsWith('http') || part.startsWith('/')) {
-        const src = part.startsWith('http') ? part : `${api.defaults.baseURL}${part}`;
-        return <img key={i} src={src} alt="Post attachment" style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '10px' }} />;
-      }
-      if (part === '![Image](' || part === ')') return null;
-
-      // Zwróć null dla samej składni markdowna
-      if (part.startsWith('![Image](')) return null;
-
-      return <span key={i}>{part}</span>;
-    });
+    if (!content) return null;
+    try {
+      const parts = content.split(/(!\[Image\]\((.*?)\))/g);
+      return parts.map((part, i) => {
+        if (!part) return null;
+        if (part.startsWith('http') || part.startsWith('/')) {
+          const src = routerSafeUrl(part);
+          return <img key={i} src={src} alt="Post attachment" style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '10px' }} />;
+        }
+        if (part.startsWith('![Image](')) return null;
+        if (part === '![Image](' || part === ')') return null;
+        return <span key={i}>{part}</span>;
+      });
+    } catch (e) {
+      console.error(e);
+      return <span>{content}</span>;
+    }
   };
 
   if (loading) return <div style={{ textAlign: 'center', marginTop: '3rem', color: 'var(--text-muted)' }}>Loading feed...</div>;
@@ -156,8 +227,7 @@ function HomePage() {
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-
-      {/* Create Post Widget */}
+      {/* Widget tworzenia posta */}
       {user && (
         <div className="card" style={{ padding: '1.5rem', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', gap: '1rem' }}>
@@ -167,11 +237,11 @@ function HomePage() {
               color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontWeight: 'bold', fontSize: '1.2rem', flexShrink: 0, overflow: 'hidden'
             }}>
-              {user.avatarUrl ? (
-                <img src={`${api.defaults.baseURL}${user.avatarUrl}`} alt="Me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <img src="/default-avatar.png" alt="Me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              )}
+              <img
+                src={user.avatarUrl ? routerSafeUrl(user.avatarUrl) : "/default-avatar.png"}
+                alt="Me"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </div>
             <div style={{ flex: 1 }}>
               <textarea
@@ -204,13 +274,15 @@ function HomePage() {
         </div>
       )}
 
-      {/* Feed */}
+      {/* Lista postów */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {posts.map(post => {
-          const isMyPost = user && (post.user_id === (user.id || user.user_id));
+          const isMyPost = user && (post.user_id === currentUserId);
           const isAdmin = user && user.is_admin;
           const commentSection = commentState[post.post_id] || {};
           const isEditing = editingPostId === post.post_id;
+
+          const postComments = post.comments || [];
 
           return (
             <div key={post.post_id} className="card" style={{ padding: '0' }}>
@@ -224,7 +296,7 @@ function HomePage() {
                         marginRight: '1rem', overflow: 'hidden'
                       }}>
                         <img
-                          src={post.user?.avatarUrl ? `${api.defaults.baseURL}${post.user.avatarUrl}` : `/default-avatar.png`}
+                          src={post.user?.avatarUrl ? routerSafeUrl(post.user.avatarUrl) : `/default-avatar.png`}
                           alt="Avatar"
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
@@ -235,7 +307,7 @@ function HomePage() {
                         {post.user?.username || 'Unknown User'}
                       </Link>
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        {new Date(post.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   </div>
@@ -264,8 +336,8 @@ function HomePage() {
                   <div>
                     <textarea
                       className="input-field"
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
+                      value={editPostContent}
+                      onChange={(e) => setEditPostContent(e.target.value)}
                       rows="3"
                       style={{ marginBottom: '1rem' }}
                     />
@@ -290,14 +362,14 @@ function HomePage() {
                 gap: '1.5rem'
               }}>
                 {(() => {
-                  const isLiked = post.likes && user && post.likes.some(l => l.user_id == (user.id || user.user_id));
+                  const isLiked = post.likes && user && post.likes.some(l => l.user_id == currentUserId);
                   return (
                     <button
                       onClick={() => handleLike(post.post_id)}
                       style={{
                         background: 'none', border: 'none',
                         display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        color: isLiked ? '#ef4444' : 'var(--text-muted)', // Red if liked
+                        color: isLiked ? '#ef4444' : 'var(--text-muted)',
                         fontSize: '0.9rem',
                         cursor: 'pointer',
                         fontWeight: isLiked ? 'bold' : 'normal'
@@ -319,18 +391,15 @@ function HomePage() {
                   }}
                 >
                   <span>💬</span>
-                  <span>{post.comments ? post.comments.length : 0} Comments</span>
+                  <span>{postComments.length} Comments</span>
                 </button>
               </div>
 
-              {/* Comment Section */}
+              {/* Sekcja komentarzy */}
               {commentSection.show && (
                 <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border-color)', background: '#fff' }}>
-                  {post.comments && post.comments.map(c => {
-                    const isCommentOwner = user && (user.id == c.user_id || user.user_id == c.user_id);
-                    // Admin can Delete any comment (but not edit)
-                    // Owner can Delete AND Edit
-
+                  {postComments.map(c => {
+                    const isCommentOwner = user && (currentUserId == c.user_id);
                     const isEditingComment = editingCommentId === c.comment_id;
 
                     return (
@@ -356,7 +425,6 @@ function HomePage() {
                           </div>
 
                           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', marginLeft: '1rem' }}>
-                            {/* Edit Button: Only Owner */}
                             {isCommentOwner && !isEditingComment && (
                               <button
                                 onClick={() => startEditingComment(c)}
@@ -365,8 +433,6 @@ function HomePage() {
                                 Edit
                               </button>
                             )}
-
-                            {/* Delete Button: Owner OR Admin */}
                             {(isAdmin || isCommentOwner) && (
                               <button
                                 onClick={() => handleDeleteComment(c.comment_id)}
